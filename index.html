@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Canvas Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        accent: '#EC4899',
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        canvas: '#FFFFFF',
+                        paper: '#FFFDD0',
+                        notebook: '#FFFBF0'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        handwriting: ['Comic Sans MS', 'cursive', 'Brush Script MT'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .tool-btn {
+                @apply flex items-center justify-center w-11 h-11 rounded-lg transition-all duration-200 hover:bg-primary/10 active:bg-primary/20;
+            }
+            .tool-btn.active {
+                @apply bg-primary/20 text-primary ring-2 ring-primary/30;
+            }
+            .color-option {
+                @apply w-8 h-8 rounded-full cursor-pointer transition-all duration-200 hover:scale-110 active:scale-90 shadow-sm;
+            }
+            .slider-track {
+                @apply h-2 rounded-full bg-gray-200 appearance-none cursor-pointer;
+            }
+            .slider-thumb {
+                @apply w-5 h-5 rounded-full bg-primary appearance-none cursor-pointer transition-transform hover:scale-125;
+            }
+            .canvas-texture {
+                background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23f0f0f0' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
+            }
+        }
+    </style>
+</head>
+<body class="font-sans bg-gray-50 text-dark overflow-hidden h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center border-b border-gray-200 z-30">
+        <div class="flex items-center space-x-3">
+            <div class="bg-primary text-white p-2 rounded-lg shadow-md">
+                <i class="fa fa-pencil-square-o text-xl"></i>
+            </div>
+            <h1 class="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Note Canvas Pro</h1>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <button id="exportPDF" class="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors flex items-center shadow-sm">
+                <i class="fa fa-file-pdf-o mr-2"></i> Export PDF
+            </button>
+            <button id="saveCanvas" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center shadow-sm">
+                <i class="fa fa-save mr-2"></i> Save
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Left Toolbar -->
+        <div class="bg-white w-14 border-r border-gray-200 flex flex-col items-center py-4 space-y-4 shadow-tool z-20">
+            <button class="tool-btn active" data-tool="handwriting" title="Handwritten Notes">
+                <i class="fa fa-pencil text-xl"></i>
+            </button>
+            <button class="tool-btn" data-tool="text" title="Typed Notes">
+                <i class="fa fa-font text-xl"></i>
+            </button>
+            <button class="tool-btn" data-tool="highlight" title="Highlight">
+                <i class="fa fa-highlighter text-xl"></i>
+            </button>
+            <button class="tool-btn" data-tool="eraser" title="Eraser">
+                <i class="fa fa-eraser text-xl"></i>
+            </button>
+            
+            <div class="border-t border-gray-200 w-8 my-2"></div>
+            
+            <button class="tool-btn" data-tool="line" title="Line">
+                <i class="fa fa-minus text-xl"></i>
+            </button>
+            <button class="tool-btn" data-tool="rectangle" title="Rectangle">
+                <i class="fa fa-square-o text-xl"></i>
+            </button>
+            <button class="tool-btn" data-tool="circle" title="Circle">
+                <i class="fa fa-circle-o text-xl"></i>
+            </button>
+            <button class="tool-btn" data-tool="arrow" title="Arrow">
+                <i class="fa fa-long-arrow-right text-xl"></i>
+            </button>
+            
+            <div class="border-t border-gray-200 w-8 my-2"></div>
+            
+            <button class="tool-btn" id="undo" title="Undo">
+                <i class="fa fa-undo text-xl"></i>
+            </button>
+            <button class="tool-btn" id="redo" title="Redo">
+                <i class="fa fa-repeat text-xl"></i>
+            </button>
+            <button class="tool-btn" id="clear" title="Clear Canvas">
+                <i class="fa fa-trash text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Main Canvas Area -->
+        <div class="flex-1 overflow-auto bg-gray-100 relative z-10">
+            <!-- Floating Quick Controls -->
+            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-3 rounded-full shadow-md flex items-center space-x-6 z-10">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">Size:</span>
+                    <input type="range" id="brushSize" min="1" max="100" value="5" 
+                        class="slider-track [&::-webkit-slider-thumb]:slider-thumb w-24">
+                    <span id="sizeValue" class="text-sm font-medium">5</span>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">Opacity:</span>
+                    <input type="range" id="opacity" min="1" max="100" value="100" 
+                        class="slider-track [&::-webkit-slider-thumb]:slider-thumb w-24">
+                    <span id="opacityValue" class="text-sm font-medium">100%</span>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">Canvas:</span>
+                    <select id="canvasStyle" class="text-sm border-none bg-transparent focus:ring-1 focus:ring-primary rounded px-2 py-1">
+                        <option value="white">White</option>
+                        <option value="paper">Paper</option>
+                        <option value="notebook">Notebook</option>
+                        <option value="grid">Grid</option>
+                        <option value="lines">Lines</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Canvas Container -->
+            <div class="flex justify-center items-start p-8 pt-24">
+                <div class="bg-white shadow-xl rounded-lg overflow-hidden transform transition-all duration-300 hover:shadow-floating" id="canvasContainer">
+                    <canvas id="drawingCanvas" width="1200" height="1600" class="cursor-crosshair canvas-texture"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Properties Panel -->
+        <div class="bg-white w-72 border-l border-gray-200 flex flex-col shadow-panel z-20">
+            <!-- Color Picker Section -->
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="font-semibold mb-3 flex items-center">
+                    <i class="fa fa-palette mr-2 text-primary"></i> Colors
+                </h3>
+                
+                <!-- Preset Colors -->
+                <div class="grid grid-cols-6 gap-2 mb-4">
+                    <div class="color-option bg-black ring-1 ring-gray-300" data-color="#000000"></div>
+                    <div class="color-option bg-gray-700" data-color="#374151"></div>
+                    <div class="color-option bg-red-500" data-color="#EF4444"></div>
+                    <div class="color-option bg-orange-500" data-color="#F97316"></div>
+                    <div class="color-option bg-yellow-500" data-color="#EAB308"></div>
+                    <div class="color-option bg-green-500" data-color="#22C55E"></div>
+                    <div class="color-option bg-blue-500" data-color="#3B82F6"></div>
+                    <div class="color-option bg-indigo-500" data-color="#6366F1"></div>
+                    <div class="color-option bg-purple-500" data-color="#A855F7"></div>
+                    <div class="color-option bg-pink-500" data-color="#EC4899"></div>
+                    <div class="color-option bg-gray-300 ring-1 ring-gray-300" data-color="#D1D5DB"></div>
+                    <div class="color-option bg-white ring-1 ring-gray-300" data-color="#FFFFFF"></div>
+                </div>
+                
+                <!-- RGB Color Picker -->
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <label class="text-xs font-medium text-gray-600">Red</label>
+                            <span id="redValue" class="text-xs font-medium">255</span>
+                        </div>
+                        <input type="range" id="red" min="0" max="255" value="0" 
+                            class="slider-track [&::-webkit-slider-thumb]:slider-thumb [&::-webkit-slider-thumb]:bg-red-500">
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <label class="text-xs font-medium text-gray-600">Green</label>
+                            <span id="greenValue" class="text-xs font-medium">0</span>
+                        </div>
+                        <input type="range" id="green" min="0" max="255" value="0" 
+                            class="slider-track [&::-webkit-slider-thumb]:slider-thumb [&::-webkit-slider-thumb]:bg-green-500">
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <label class="text-xs font-medium text-gray-600">Blue</label>
+                            <span id="blueValue" class="text-xs font-medium">0</span>
+                        </div>
+                        <input type="range" id="blue" min="0" max="255" value="0" 
+                            class="slider-track [&::-webkit-slider-thumb]:slider-thumb [&::-webkit-slider-thumb]:bg-blue-500">
+                    </div>
+                    
+                    <div class="pt-2">
+                        <div class="flex items-center space-x-3">
+                            <div id="colorPreview" class="w-12 h-12 rounded-lg bg-black ring-2 ring-gray-200"></div>
+                            <input type="text" id="colorHex" value="#000000" 
+                                class="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Note Properties Section -->
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="font-semibold mb-3 flex items-center">
+                    <i class="fa fa-pencil mr-2 text-primary"></i> Note Properties
+                </h3>
+                
+                <div class="space-y-4">
+                    <!-- Handwriting Settings -->
+                    <div id="handwritingSettings">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Handwriting Style</label>
+                        <select id="handwritingStyle" class="w-full px-2.5 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <option value="smooth">Smooth Cursive</option>
+                            <option value="sketchy">Sketchy</option>
+                            <option value="bold">Bold</option>
+                            <option value="light">Light</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Text Settings -->
+                    <div id="textSettings" class="hidden">
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Font Family</label>
+                            <select id="fontFamily" class="w-full px-2.5 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="Georgia, serif">Georgia</option>
+                                <option value="Courier New, monospace">Courier New</option>
+                                <option value="Times New Roman, serif">Times New Roman</option>
+                                <option value="Verdana, sans-serif">Verdana</option>
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Font Size</label>
+                                <input type="number" id="fontSize" min="8" max="72" value="16" 
+                                    class="w-full px-2.5 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Text Alignment</label>
+                                <select id="textAlign" class="w-full px-2.5 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                    <option value="left">Left</option>
+                                    <option value="center">Center</option>
+                                    <option value="right">Right</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-2">
+                            <button id="boldText" class="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors">
+                                <i class="fa fa-bold"></i>
+                            </button>
+                            <button id="italicText" class="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors">
+                                <i class="fa fa-italic"></i>
+                            </button>
+                            <button id="underlineText" class="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors">
+                                <i class="fa fa-underline"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas Settings Section -->
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="font-semibold mb-3 flex items-center">
+                    <i class="fa fa-sliders mr-2 text-primary"></i> Canvas Settings
+                </h3>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Line Style</label>
+                        <select id="lineStyle" class="w-full px-2.5 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <option value="solid">Solid</option>
+                            <option value="dashed">Dashed</option>
+                            <option value="dotted">Dotted</option>
+                            <option value="double">Double</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Fill Shapes</label>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="fillShape" class="mr-2 h-4 w-4 text-primary focus:ring-primary/50">
+                            <label for="fillShape" class="text-sm">Enable fill for shapes</label>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 pt-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Width</label>
+                            <input type="number" id="canvasWidth" value="1200" min="400" max="3000"
+                                class="w-full px-2.5 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Height</label>
+                            <input type="number" id="canvasHeight" value="1600" min="400" max="4000"
+                                class="w-full px-2.5 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        </div>
+                    </div>
+                    
+                    <button id="resizeCanvas" class="w-full mt-2 px-3 py-2.5 bg-primary text-white rounded hover:bg-primary/90 transition-colors text-sm shadow-sm">
+                        Resize Canvas
+                    </button>
+                </div>
+            </div>
+
+            <!-- Layers Section -->
+            <div class="p-4 flex-1 overflow-y-auto">
+                <h3 class="font-semibold mb-3 flex items-center">
+                    <i class="fa fa-layers mr-2 text-primary"></i> Layers
+                </h3>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="flex items-center justify-between p-2 bg-primary/10 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fa fa-eye text-sm mr-2 text-gray-500"></i>
+                            <span class="text-sm font-medium">Layer 1</span>
+                        </div>
+                        <div class="flex space-x-1">
+                            <button class="p-1 hover:bg-white/50 rounded text-xs text-gray-500">
+                                <i class="fa fa-arrows-alt"></i>
+                            </button>
+                            <button class="p-1 hover:bg-white/50 rounded text-xs text-gray-500">
+                                <i class="fa fa-clone"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fa fa-eye text-sm mr-2 text-gray-500"></i>
+                            <span class="text-sm">Background</span>
+                        </div>
+                        <div class="flex space-x-1">
+                            <button class="p-1 hover:bg-white/50 rounded text-xs text-gray-500">
+                                <i class="fa fa-arrows-alt"></i>
+                            </button>
+                            <button class="p-1 hover:bg-white/50 rounded text-xs text-gray-500 opacity-50 cursor-not-allowed">
+                                <i class="fa fa-clone"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="w-full flex items-center justify-center space-x-2 px-3 py-2 border border-dashed border-gray-300 text-gray-600 rounded hover:bg-gray-50 transition-colors text-sm">
+                    <i class="fa fa-plus"></i>
+                    <span>Add New Layer</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Canvas setup
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+            const canvasContainer = document.getElementById('canvasContainer');
+            
+            // Drawing state
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let startX = 0;
+            let startY = 0;
+            let currentTool = 'handwriting';
+            let tempCanvas = document.createElement('canvas');
+            let tempCtx = tempCanvas.getContext('2d');
+            let textInput = null;
+            let textProperties = {
+                bold: false,
+                italic: false,
+                underline: false,
+                align: 'left'
+            };
+            
+            // History management
+            let history = [];
+            let historyIndex = -1;
+            const MAX_HISTORY = 50;
+            
+            // Drawing settings
+            const settings = {
+                color: '#000000',
+                size: 5,
+                opacity: 100,
+                lineStyle: 'solid',
+                fillShape: false,
+                fontFamily: 'Arial, sans-serif',
+                fontSize: 16,
+                handwritingStyle: 'smooth',
+                canvasStyle: 'white'
+            };
+            
+            // Initialize temporary canvas
+            function initTempCanvas() {
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+            }
+            
+            // Save current state to history
+            function saveState() {
+                if (historyIndex < history.length - 1) {
+                    history = history.slice(0, historyIndex + 1);
+                }
+                
+                const dataURL = canvas.toDataURL();
+                history.push(dataURL);
+                
+                if (history.length > MAX_HISTORY) {
+                    history.shift();
+                }
+                
+                historyIndex = history.length - 1;
+                updateHistoryButtons();
+            }
+            
+            // Update undo/redo button states
+            function updateHistoryButtons() {
+                const undoBtn = document.getElementById('undo');
+                const redoBtn = document.getElementById('redo');
+                
+                undoBtn.disabled = historyIndex <= 0;
+                redoBtn.disabled = historyIndex >= history.length - 1;
+                
+                if (undoBtn.disabled) {
+                    undoBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    undoBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+                
+                if (redoBtn.disabled) {
+                    redoBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    redoBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+            
+            // Undo last action
+            function undo() {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    const img = new Image();
+                    img.src = history[historyIndex];
+                    img.onload = function() {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        redrawCanvasBackground();
+                    };
+                    updateHistoryButtons();
+                }
+            }
+            
+            // Redo last undone action
+            function redo() {
+                if (historyIndex < history.length - 1) {
+                    historyIndex++;
+                    const img = new Image();
+                    img.src = history[historyIndex];
+                    img.onload = function() {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        redrawCanvasBackground();
+                    };
+                    updateHistoryButtons();
+                }
+            }
+            
+            // Initialize canvas with background
+            function initCanvas() {
+                setCanvasStyle(settings.canvasStyle);
+                saveState();
+                initTempCanvas();
+            }
+            
+            // Set canvas background style
+            function setCanvasStyle(style) {
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Set background based on style
+                switch(style) {
+                    case 'white':
+                        canvasContainer.classList.remove('bg-paper', 'bg-notebook');
+                        canvasContainer.classList.add('bg-white');
+                        canvas.classList.remove('canvas-texture');
+                        ctx.fillStyle = '#FFFFFF';
+                        break;
+                    case 'paper':
+                        canvasContainer.classList.remove('bg-white', 'bg-notebook');
+                        canvasContainer.classList.add('bg-paper');
+                        canvas.classList.add('canvas-texture');
+                        ctx.fillStyle = '#FFFDD0';
+                        break;
+                    case 'notebook':
+                        canvasContainer.classList.remove('bg-white', 'bg-paper');
+                        canvasContainer.classList.add('bg-notebook');
+                        canvas.classList.add('canvas-texture');
+                        ctx.fillStyle = '#FFFBF0';
+                        break;
+                    case 'grid':
+                        canvasContainer.classList.remove('bg-paper', 'bg-notebook');
+                        canvasContainer.classList.add('bg-white');
+                        canvas.classList.remove('canvas-texture');
+                        ctx.fillStyle = '#FFFFFF';
+                        drawGrid();
+                        break;
+                    case 'lines':
+                        canvasContainer.classList.remove('bg-paper', 'bg-notebook');
+                        canvasContainer.classList.add('bg-white');
+                        canvas.classList.remove('canvas-texture');
+                        ctx.fillStyle = '#FFFFFF';
+                        drawLines();
+                        break;
+                }
+                
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            // Redraw canvas background without affecting content
+            function redrawCanvasBackground() {
+                const currentContent = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                setCanvasStyle(settings.canvasStyle);
+                ctx.putImageData(currentContent, 0, 0);
+            }
+            
+            // Draw grid background
+            function drawGrid() {
+                const gridSize = 20;
+                ctx.strokeStyle = '#EEEEEE';
+                ctx.lineWidth = 1;
+                
+                // Vertical lines
+                for (let x = 0; x <= canvas.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                
+                // Horizontal lines
+                for (let y = 0; y <= canvas.height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw lines background (like notebook paper)
+            function drawLines() {
+                const lineHeight = 30;
+                const margin = 50;
+                
+                // Margin line
+                ctx.strokeStyle = '#DDDDDD';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(margin, 0);
+                ctx.lineTo(margin, canvas.height);
+                ctx.stroke();
+                
+                // Horizontal lines
+                ctx.strokeStyle = '#EEEEEE';
+                ctx.lineWidth = 1;
+                for (let y = lineHeight; y <= canvas.height; y += lineHeight) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+            }
+            
+            // Set context properties based on current settings
+            function setContextProperties() {
+                ctx.strokeStyle = settings.color;
+                ctx.fillStyle = settings.color;
+                ctx.lineWidth = settings.size;
+                ctx.globalAlpha = settings.opacity / 100;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // Set line style
+                switch(settings.lineStyle) {
+                    case 'solid':
+                        ctx.setLineDash([]);
+                        break;
+                    case 'dashed':
+                        ctx.setLineDash([10, 5]);
+                        break;
+                    case 'dotted':
+                        ctx.setLineDash([2, 2]);
+                        break;
+                    case 'double':
+                        ctx.setLineDash([]);
+                        ctx.lineWidth = settings.size * 2;
+                        break;
+                }
+            }
+            
+            // Start drawing
+            function startDrawing(e) {
+                isDrawing = true;
+                
+                // Get coordinates relative to canvas
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                lastX = (e.clientX - rect.left) * scaleX;
+                lastY = (e.clientY - rect.top) * scaleY;
+                startX = lastX;
+                startY = lastY;
+                
+                setContextProperties();
+                
+                // Handle text tool separately
+                if (currentTool === 'text') {
+                    createTextInput(e.clientX, e.clientY);
+                    isDrawing = false;
+                }
+            }
+            
+            // Create text input element for text tool
+            function createTextInput(x, y) {
+                // Remove any existing text input
+                if (textInput) {
+                    document.body.removeChild(textInput);
+                }
+                
+                // Create new text input
+                textInput = document.createElement('div');
+                textInput.contentEditable = true;
+                textInput.className = 'absolute px-3 py-2 border border-primary/30 rounded-md bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/50 min-w-[100px]';
+                textInput.style.left = `${x}px`;
+                textInput.style.top = `${y}px`;
+                textInput.style.fontFamily = settings.fontFamily;
+                textInput.style.fontSize = `${settings.fontSize}px`;
+                textInput.style.color = settings.color;
+                
+                // Apply text properties
+                if (textProperties.bold) textInput.style.fontWeight = 'bold';
+                if (textProperties.italic) textInput.style.fontStyle = 'italic';
+                if (textProperties.underline) textInput.style.textDecoration = 'underline';
+                
+                document.body.appendChild(textInput);
+                textInput.focus();
+                
+                // Save text when focus is lost
+                textInput.addEventListener('blur', function() {
+                    if (this.innerText.trim() !== '') {
+                        drawText(this.innerText, startX, startY);
+                    }
+                    document.body.removeChild(this);
+                    textInput = null;
+                });
+            }
+            
+            // Draw text on canvas
+            function drawText(text, x, y) {
+                setContextProperties();
+                ctx.font = `${textProperties.bold ? 'bold ' : ''}${textProperties.italic ? 'italic ' : ''}${settings.fontSize}px ${settings.fontFamily}`;
+                ctx.textBaseline = 'top';
+                
+                // Handle text alignment
+                let textX = x;
+                if (textProperties.align === 'center') {
+                    const textWidth = ctx.measureText(text).width;
+                    textX = x - textWidth / 2;
+                } else if (textProperties.align === 'right') {
+                    const textWidth = ctx.measureText(text).width;
+                    textX = x - textWidth;
+                }
+                
+                // Draw text with underline if needed
+                ctx.fillText(text, textX, y);
+                
+                if (textProperties.underline) {
+                    const textMetrics = ctx.measureText(text);
+                    ctx.beginPath();
+                    ctx.moveTo(textX, y + settings.fontSize + 2);
+                    ctx.lineTo(textX + textMetrics.width, y + settings.fontSize + 2);
+                    ctx.lineWidth = Math.max(1, settings.size / 3);
+                    ctx.stroke();
+                }
+                
+                saveState();
+            }
+            
+            // Draw during mouse movement
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                const currentX = (e.clientX - rect.left) * scaleX;
+                const currentY = (e.clientY - rect.top) * scaleY;
+                
+                setContextProperties();
+                tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                switch(currentTool) {
+                    case 'handwriting':
+                        drawHandwriting(currentX, currentY);
+                        break;
+                        
+                    case 'highlight':
+                        drawHighlight(currentX, currentY);
+                        break;
+                        
+                    case 'eraser':
+                        drawEraser(currentX, currentY);
+                        break;
+                        
+                    case 'line':
+                        drawLine(currentX, currentY);
+                        break;
+                        
+                    case 'rectangle':
+                        drawRectangle(currentX, currentY);
+                        break;
+                        
+                    case 'circle':
+                        drawCircle(currentX, currentY);
+                        break;
+                        
+                    case 'arrow':
+                        drawArrow(currentX, currentY);
+                        break;
+                }
+                
+                lastX = currentX;
+                lastY = currentY;
+            }
+            
+            // Draw handwriting with different styles
+            function drawHandwriting(currentX, currentY) {
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                
+                // Add variation based on handwriting style
+                if (settings.handwritingStyle === 'sketchy') {
+                    // Add some randomness for sketchy style
+                    const cpX = (lastX + currentX) / 2 + (Math.random() * 10 - 5);
+                    const cpY = (lastY + currentY) / 2 + (Math.random() * 10 - 5);
+                    ctx.quadraticCurveTo(cpX, cpY, currentX, currentY);
+                } else if (settings.handwritingStyle === 'bold') {
+                    // Thicker line with pressure simulation
+                    ctx.lineTo(currentX, currentY);
+                    ctx.lineWidth = Math.max(settings.size, settings.size * (0.8 + Math.random() * 0.4));
+                } else if (settings.handwritingStyle === 'light') {
+                    // Thinner line with some transparency variation
+                    ctx.lineTo(currentX, currentY);
+                    ctx.globalAlpha = (settings.opacity / 100) * (0.6 + Math.random() * 0.4);
+                } else {
+                    // Smooth cursive style
+                    ctx.lineTo(currentX, currentY);
+                }
+                
+                ctx.stroke();
+            }
+            
+            // Draw highlight
+            function drawHighlight(currentX, currentY) {
+                const originalColor = settings.color;
+                const originalAlpha = ctx.globalAlpha;
+                
+                // Set highlight properties - semi-transparent yellow by default
+                ctx.strokeStyle = '#FFF380';
+                ctx.globalAlpha = 0.4;
+                ctx.lineWidth = settings.size * 5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(currentX, currentY);
+                ctx.stroke();
+                
+                // Restore original properties
+                ctx.strokeStyle = originalColor;
+                ctx.globalAlpha = originalAlpha;
+            }
+            
+            // Draw eraser
+            function drawEraser(currentX, currentY) {
+                const originalColor = settings.color;
+                const originalWidth = ctx.lineWidth;
+                
+                // Set eraser properties
+                ctx.strokeStyle = getCanvasBackgroundColor();
+                ctx.lineWidth = settings.size * 3;
+                
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(currentX, currentY);
+                ctx.stroke();
+                
+                // Restore original properties
+                ctx.strokeStyle = originalColor;
+                ctx.lineWidth = originalWidth;
+            }
+            
+            // Get canvas background color for eraser
+            function getCanvasBackgroundColor() {
+                switch(settings.canvasStyle) {
+                    case 'white': return '#FFFFFF';
+                    case 'paper': return '#FFFDD0';
+                    case 'notebook': return '#FFFBF0';
+                    case 'grid': return '#FFFFFF';
+                    case 'lines': return '#FFFFFF';
+                    default: return '#FFFFFF';
+                }
+            }
+            
+            // Draw line
+            function drawLine(currentX, currentY) {
+                tempCtx.strokeStyle = settings.color;
+                tempCtx.lineWidth = settings.size;
+                tempCtx.globalAlpha = settings.opacity / 100;
+                tempCtx.lineCap = 'round';
+                
+                // Apply line style
+                switch(settings.lineStyle) {
+                    case 'solid':
+                        tempCtx.setLineDash([]);
+                        break;
+                    case 'dashed':
+                        tempCtx.setLineDash([10, 5]);
+                        break;
+                    case 'dotted':
+                        tempCtx.setLineDash([2, 2]);
+                        break;
+                    case 'double':
+                        tempCtx.setLineDash([]);
+                        tempCtx.lineWidth = settings.size;
+                        break;
+                }
+                
+                tempCtx.beginPath();
+                tempCtx.moveTo(startX, startY);
+                tempCtx.lineTo(currentX, currentY);
+                tempCtx.stroke();
+                
+                // Draw temp canvas on main canvas
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+            
+            // Draw rectangle
+            function drawRectangle(currentX, currentY) {
+                tempCtx.strokeStyle = settings.color;
+                tempCtx.fillStyle = settings.fillShape ? settings.color : 'transparent';
+                tempCtx.lineWidth = settings.size;
+                tempCtx.globalAlpha = settings.opacity / 100;
+                
+                const width = currentX - startX;
+                const height = currentY - startY;
+                
+                tempCtx.fillRect(startX, startY, width, height);
+                tempCtx.strokeRect(startX, startY, width, height);
+                
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+            
+            // Draw circle
+            function drawCircle(currentX, currentY) {
+                tempCtx.strokeStyle = settings.color;
+                tempCtx.fillStyle = settings.fillShape ? settings.color : 'transparent';
+                tempCtx.lineWidth = settings.size;
+                tempCtx.globalAlpha = settings.opacity / 100;
+                
+                const radius = Math.sqrt(Math.pow((currentX - startX), 2) + Math.pow((currentY - startY), 2));
+                
+                tempCtx.beginPath();
+                tempCtx.arc(startX, startY, radius, 0, Math.PI * 2);
+                tempCtx.fill();
+                tempCtx.stroke();
+                
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+            
+            // Draw arrow
+            function drawArrow(currentX, currentY) {
+                tempCtx.strokeStyle = settings.color;
+                tempCtx.lineWidth = settings.size;
+                tempCtx.globalAlpha = settings.opacity / 100;
+                tempCtx.lineCap = 'round';
+                
+                // Calculate arrow angle
+                const angle = Math.atan2(currentY - startY, currentX - startX);
+                const headLength = Math.max(10, settings.size * 3);
+                
+                // Draw main line
+                tempCtx.beginPath();
+                tempCtx.moveTo(startX, startY);
+                tempCtx.lineTo(currentX, currentY);
+                tempCtx.stroke();
+                
+                // Draw arrow head
+                tempCtx.beginPath();
+                tempCtx.moveTo(currentX, currentY);
+                tempCtx.lineTo(
+                    currentX - headLength * Math.cos(angle - Math.PI / 6),
+                    currentY - headLength * Math.sin(angle - Math.PI / 6)
+                );
+                tempCtx.moveTo(currentX, currentY);
+                tempCtx.lineTo(
+                    currentX - headLength * Math.cos(angle + Math.PI / 6),
+                    currentY - headLength * Math.sin(angle + Math.PI / 6)
+                );
+                tempCtx.stroke();
+                
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+            
+            // End drawing
+            function endDrawing() {
+                if (!isDrawing) return;
+                
+                isDrawing = false;
+                
+                // Save to history for drawing tools
+                if (['handwriting', 'highlight', 'eraser', 'line', 'rectangle', 'circle', 'arrow'].includes(currentTool)) {
+                    // For shape tools, draw final version
+                    if (['line', 'rectangle', 'circle', 'arrow'].includes(currentTool)) {
+                        ctx.drawImage(tempCanvas, 0, 0);
+                    }
+                    saveState();
+                }
+                
+                // Clear temp canvas
+                initTempCanvas();
+            }
+            
+            // Update color display and settings from RGB values
+            function updateColorFromRGB() {
+                const r = parseInt(document.getElementById('red').value);
+                const g = parseInt(document.getElementById('green').value);
+                const b = parseInt(document.getElementById('blue').value);
+                
+                // Update value displays
+                document.getElementById('redValue').textContent = r;
+                document.getElementById('greenValue').textContent = g;
+                document.getElementById('blueValue').textContent = b;
+                
+                // Convert to hex
+                const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+                document.getElementById('colorHex').value = hex;
+                
+                // Update preview and settings
+                document.getElementById('colorPreview').style.backgroundColor = hex;
+                settings.color = hex;
+            }
+            
+            // Convert hex color to RGB
+            function hexToRGB(hex) {
+                // Remove # if present
+                hex = hex.replace('#', '');
+                
+                // Parse values
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                
+                return { r, g, b };
+            }
+            
+            // Event Listeners
+            // Drawing events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', endDrawing);
+            canvas.addEventListener('mouseout', endDrawing);
+            
+            // Touch support
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                startDrawing(touch);
+            });
+            
+            canvas.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                draw(touch);
+            });
+            
+            canvas.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                endDrawing();
+            });
+            
+            // Tool selection
+            document.querySelectorAll('[data-tool]').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all tools
+                    document.querySelectorAll('[data-tool]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked tool
+                    this.classList.add('active');
+                    
+                    // Set current tool
+                    currentTool = this.getAttribute('data-tool');
+                    
+                    // Show/hide relevant settings panels
+                    document.getElementById('handwritingSettings').classList.add('hidden');
+                    document.getElementById('textSettings').classList.add('hidden');
+                    
+                    if (currentTool === 'handwriting') {
+                        document.getElementById('handwritingSettings').classList.remove('hidden');
+                        canvas.style.cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'%234F46E5\'%3E%3Cpath d=\'M12 2c5.51 0 10 4.49 10 10s-4.49 10-10 10S2 17.51 2 12 6.49 2 12 2zm0 2c-4.41 0-8 3.59-8 8s3.59 8 8 8 8-3.59 8-8-3.59-8-8-8zm-1 3v5l4.28 2.54.72-1.21-3.5-2.08V7H11z\'/%3E%3C/svg%3E") 0 24, auto';
+                    } else if (currentTool === 'text') {
+                        document.getElementById('textSettings').classList.remove('hidden');
+                        canvas.style.cursor = 'text';
+                    } else if (currentTool === 'highlight') {
+                        canvas.style.cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'%23FFF380\' stroke=\'%234F46E5\' stroke-width=\'1\'%3E%3Crect x=\'3\' y=\'11\' width=\'18\' height=\'11\' rx=\'2\' ry=\'2\'/%3E%3Cpath d=\'M7 11V7a5 5 0 0 1 10 0v4\'/%3E%3C/svg%3E") 12 12, auto';
+                    } else if (currentTool === 'eraser') {
+                        canvas.style.cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'white\' stroke=\'%234F46E5\' stroke-width=\'1\'%3E%3Crect x=\'3\' y=\'3\' width=\'18\' height=\'18\'/%3E%3C/svg%3E") 12 12, auto';
+                    } else {
+                        canvas.style.cursor = 'crosshair';
+                    }
+                });
+            });
+            
+            // Color selection
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const color = this.getAttribute('data-color');
+                    const rgb = hexToRGB(color);
+                    
+                    // Update color controls
+                    document.getElementById('red').value = rgb.r;
+                    document.getElementById('green').value = rgb.g;
+                    document.getElementById('blue').value = rgb.b;
+                    updateColorFromRGB();
+                });
+            });
+            
+            // RGB sliders
+            document.getElementById('red').addEventListener('input', updateColorFromRGB);
+            document.getElementById('green').addEventListener('input', updateColorFromRGB);
+            document.getElementById('blue').addEventListener('input', updateColorFromRGB);
+            
+            // Hex color input
+            document.getElementById('colorHex').addEventListener('input', function() {
+                if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+                    const rgb = hexToRGB(this.value);
+                    document.getElementById('red').value = rgb.r;
+                    document.getElementById('green').value = rgb.g;
+                    document.getElementById('blue').value = rgb.b;
+                    document.getElementById('colorPreview').style.backgroundColor = this.value;
+                    settings.color = this.value;
+                }
+            });
+            
+            // Brush size
+            const brushSize = document.getElementById('brushSize');
+            const sizeValue = document.getElementById('sizeValue');
+            
+            brushSize.addEventListener('input', function() {
+                settings.size = parseInt(this.value);
+                sizeValue.textContent = this.value;
+            });
+            
+            // Opacity
+            const opacitySlider = document.getElementById('opacity');
+            const opacityValue = document.getElementById('opacityValue');
+            
+            opacitySlider.addEventListener('input', function() {
+                settings.opacity = parseInt(this.value);
+                opacityValue.textContent = `${this.value}%`;
+            });
+            
+            // Canvas style
+            document.getElementById('canvasStyle').addEventListener('change', function() {
+                settings.canvasStyle = this.value;
+                redrawCanvasBackground();
+            });
+            
+            // Line style
+            document.getElementById('lineStyle').addEventListener('change', function() {
+                settings.lineStyle = this.value;
+            });
+            
+            // Fill shape
+            document.getElementById('fillShape').addEventListener('change', function() {
+                settings.fillShape = this.checked;
+            });
+            
+            // Handwriting style
+            document.getElementById('handwritingStyle').addEventListener('change', function() {
+                settings.handwritingStyle = this.value;
+            });
+            
+            // Font family
+            document.getElementById('fontFamily').addEventListener('change', function() {
+                settings.fontFamily = this.value;
+            });
+            
+            // Font size
+            document.getElementById('fontSize').addEventListener('input', function() {
+                settings.fontSize = parseInt(this.value);
+            });
+            
+            // Text alignment
+            document.getElementById('textAlign').addEventListener('change', function() {
+                textProperties.align = this.value;
+            });
+            
+            // Text formatting buttons
+            document.getElementById('boldText').addEventListener('click', function() {
+                textProperties.bold = !textProperties.bold;
+                this.classList.toggle('bg-primary/10', textProperties.bold);
+            });
+            
+            document.getElementById('italicText').addEventListener('click', function() {
+                textProperties.italic = !textProperties.italic;
+                this.classList.toggle('bg-primary/10', textProperties.italic);
+            });
+            
+            document.getElementById('underlineText').addEventListener('click', function() {
+                textProperties.underline = !textProperties.underline;
+                this.classList.toggle('bg-primary/10', textProperties.underline);
+            });
+            
+            // Undo/redo
+            document.getElementById('undo').addEventListener('click', undo);
+            document.getElementById('redo').addEventListener('click', redo);
+            
+            // Clear canvas
+            document.getElementById('clear').addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear the canvas?')) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    redrawCanvasBackground();
+                    saveState();
+                }
+            });
+            
+            // Resize canvas
+            document.getElementById('resizeCanvas').addEventListener('click', function() {
+                const newWidth = parseInt(document.getElementById('canvasWidth').value);
+                const newHeight = parseInt(document.getElementById('canvasHeight').value);
+                
+                if (newWidth && newHeight && newWidth >= 400 && newHeight >= 400 && 
+                    newWidth <= 3000 && newHeight <= 4000) {
+                    
+                    // Save current content
+                    const temp = document.createElement('canvas');
+                    const tempCtx = temp.getContext('2d');
+                    temp.width = canvas.width;
+                    temp.height = canvas.height;
+                    tempCtx.drawImage(canvas, 0, 0);
+                    
+                    // Resize main canvas
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    
+                    // Redraw background and content
+                    setCanvasStyle(settings.canvasStyle);
+                    ctx.drawImage(temp, 0, 0, 
+                        Math.min(temp.width, canvas.width), 
+                        Math.min(temp.height, canvas.height));
+                    
+                    // Update temp canvas
+                    initTempCanvas();
+                    
+                    saveState();
+                } else {
+                    alert('Please enter valid dimensions (400-3000 for width, 400-4000 for height)');
+                }
+            });
+            
+            // Save canvas
+            document.getElementById('saveCanvas').addEventListener('click', function() {
+                const dataURL = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = 'note-canvas-' + new Date().toISOString().slice(0,10) + '.png';
+                link.href = dataURL;
+                link.click();
+            });
+            
+            // Export PDF (simulated)
+            document.getElementById('exportPDF').addEventListener('click', function() {
+                alert('PDF export feature would generate a high-quality PDF of your canvas here.');
+                // In a real implementation, you would use a library like jsPDF
+            });
+            
+            // Initialize canvas
+            initCanvas();
+        });
+    </script>
+</body>
+</html>
+    
